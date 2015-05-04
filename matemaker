@@ -1,0 +1,256 @@
+#!perl
+
+# matemaker - make artificial mate pairs from long seqs
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+use strict;
+use warnings;
+use JFR::Fasta;
+use Getopt::Long;
+use Pod::Usage;
+use Data::Dumper;
+
+our $PROGRAM_NAME = 'matemaker';
+our $VERSION = 0.02;
+our $AUTHOR  = 'Joseph F. Ryan <joseph.ryan@whitney.ufl.edu>';
+
+our $DEFAULT_READLEN = 50;
+our $DEFAULT_INSERT = 5000;
+our $DEFAULT_MATES_PER_KB = 5;
+
+MAIN: {
+    my $rh_opts = process_options();        
+    my $ra_data = get_mates($rh_opts);
+    print_mates($ra_data,$rh_opts);
+}
+
+sub print_mates {
+    my $ra_data = shift;
+    my $rh_opts = shift;
+    my $out = $rh_opts->{'out'};
+
+    my $mp1 = "$out.A.f";
+    my $mp2 = "$out.B.f";
+    if ($rh_opts->{'fasta'}) {
+        $mp1 .= 'a'; $mp2 .= 'a';
+    } else {
+        $mp1 .= 'q'; $mp2 .= 'q';
+    }
+    open MP1, ">$mp1" or die "cannot open $mp1:$!";
+    open MP2, ">$mp2" or die "cannot open $mp2:$!";
+    if ($rh_opts->{'print_inserts'}) {
+        open INS, ">$out.inserts.fa" or die "cannot open >$out.inserts.fa:$!";
+    }
+
+    my $count = 0;
+    foreach my $ra_d (@{$ra_data}) {
+        $ra_d->[0] = revcomp($ra_d->[0]);
+        if ($rh_opts->{'fasta'}) {
+            print MP1 ">$count\n$ra_d->[0]\n";
+            print MP2 ">$count\n$ra_d->[1]\n";
+        } else {
+            my $qual_string = 'B' x $rh_opts->{'readlen'};
+            print MP1 "\@$count\n$ra_d->[0]\n+\n$qual_string\n";
+            print MP2 "\@$count\n$ra_d->[1]\n+\n$qual_string\n";
+        }
+        print INS ">$count\n$ra_d->[2]\n" if ($rh_opts->{'print_inserts'});
+        $count++;
+    }
+    print "$PROGRAM_NAME $VERSION\n";
+    print "output written to: $mp1, $mp2";
+    print ", and $out.inserts.fa" if ($rh_opts->{'print_inserts'});
+    print "\n";
+}
+
+sub get_mates {
+    my $rh_opts = shift;
+    my @data = ();
+    my $fp = JFR::Fasta->new($rh_opts->{'assembly'});
+    while (my $rec = $fp->get_record()) {
+        my $len = length($rec->{'seq'});
+        my $diff = $len - $rh_opts->{'insertsize'};
+        next if ($len < ($rh_opts->{'insertsize'} + $rh_opts->{'readlen'} * 2));
+        my $num_mates = int(($len - $rh_opts->{'insertsize'}) / (1000 / $rh_opts->{'matesperkb'})); 
+        for (my $i = 0; $i < $num_mates; $i++) {
+            my $ra_mp = get_mate_pair($rec->{'seq'},$len,$rh_opts);
+            push @data, $ra_mp if ($ra_mp);
+        }
+    }
+    return \@data;
+}
+
+sub get_mate_pair {
+    my $seq         = shift;
+    my $len         = shift;
+    my $rh_opts     = shift;
+    my $insert_size = $rh_opts->{'insertsize'};
+    my $readlen     = $rh_opts->{'readlen'};
+
+    my $frag_size = $insert_size - ($readlen * 2);
+    my $left_limit = $len - $frag_size - $readlen;
+    my $mp1_start = int(rand($left_limit));
+    my $frag_start = $mp1_start + $readlen;
+    my $mp2_start = $frag_start + $frag_size;
+    my $mp1 = substr $seq, $mp1_start, $readlen or substr_err($len,$mp1_start,1);
+    my $mp2 = substr $seq, $mp2_start, $readlen or substr_err($len,$mp2_start,2);
+    return 0 if ($mp1 =~ m/[Nn][Nn]/);
+    return 0 if ($mp2 =~ m/[Nn][Nn]/);
+    my $ra_out = [$mp1,$mp2];
+    if ($rh_opts->{'print_inserts'}) {
+        $ra_out->[2] = substr $seq, $frag_start, $frag_size;
+    }
+    return $ra_out;
+}
+
+sub substr_err {
+    my $len = shift;
+    my $start = shift;
+    my $mpnum = shift;
+    warn "substr error: mpnum=$mpnum, seqlen = $len, start = $start\n";
+}
+
+sub process_options {
+    my $rh_opts = {};
+    my $opt_results = Getopt::Long::GetOptions(
+                              "version" => \$rh_opts->{'version'},
+                           "assembly=s" => \$rh_opts->{'assembly'},
+                                "out=s" => \$rh_opts->{'out'},
+                                "fasta" => \$rh_opts->{'fasta'},
+                        "print_inserts" => \$rh_opts->{'print_inserts'},
+                            "readlen=i" => \$rh_opts->{'readlen'},
+                         "insertsize=i" => \$rh_opts->{'insertsize'},
+                         "matesperkb=i" => \$rh_opts->{'matesperkb'},
+                                 "help" => \$rh_opts->{'help'});
+    die "$VERSION\n" if ($rh_opts->{'version'});
+    pod2usage({-exitval => 0, -verbose => 2}) if $rh_opts->{'help'};
+    $rh_opts->{'readlen'} = $DEFAULT_READLEN unless ($rh_opts->{'readlen'});
+    $rh_opts->{'insertsize'} = $DEFAULT_INSERT 
+        unless ($rh_opts->{'insertsize'});
+    $rh_opts->{'matesperkb'} = $DEFAULT_MATES_PER_KB 
+        unless ($rh_opts->{'matesperkb'});
+    unless ($rh_opts->{'assembly'} && $rh_opts->{'out'}) {
+        warn "missing --assembly" unless ($rh_opts->{'assembly'});
+        warn "missing --out" unless ($rh_opts->{'out'});
+        usage();
+    }
+    return $rh_opts;
+}
+
+sub usage {
+    die "usage: $0 [--readlen=INT] [--insertsize=INT] [--fasta] [--print_inserts] [--matesperkb=INT] --assembly=FILE --out=OUTPUTPREFIX\n";
+}
+
+# copied from version 0.06 of NHGRI::Bioutils (w/warnings commented)
+sub revcomp {
+    my $seq = shift;
+    $seq = reverse($seq);
+    if ($seq =~ /[Uu]/ && $seq !~ /[Tt]/) {
+        $seq =~ tr/acgurymkswhbvdACGURYMKSWHBVD/ugcayrkmswdvbhUGCAYRKMSWDVBH/;
+    } elsif ($seq =~ /[Tt]/ && $seq !~ /[Uu]/) {
+        $seq =~ tr/acgtrymkswhbvdACGTRYMKSWHBVD/tgcayrkmswdvbhTGCAYRKMSWDVBH/;
+    } else {
+        if ($seq =~ /[Uu]/) {
+#            warn "warning: sequence contains both thymine and uracil.\n";
+        } else {
+#            warn "warning: sequence contains neither thymine nor uracil.\n";
+        }
+#        carp "warning: adenines will be converted to thymines.";
+        $seq =~ tr/acgturymkswhbvdACGTURYMKSWHBVD/tgcaayrkmswdvbhTGCAAYRKMSWDVBH/;
+    }
+    return $seq;
+}
+
+=head1 NAME
+
+B<matemaker> - make artificial mate pairs from long seqs
+
+=head1 AUTHOR
+
+Joseph F. Ryan <joseph.ryan@whitney.ufl.edu>
+
+=head1 SYNOPSIS
+
+matemaker [--readlen=INT] [--insertsize=INT] [--fasta] [--print_inserts] [--matesperkb=INT] --assembly=FILE --out=OUTPUTPREFIX\n";
+
+=head1 DESCRIPTION
+
+This program will generate a pair of fastq files (left and right) that
+consist of artificial mate-pairs generated from one or more sequences sent
+in as input. It is intended to scaffold an optimal assembly with suboptimal
+assemblies. The generated matepairs are in the same orientation as illumina matepair sequencing, and can be used without modification as input to any scaffolding software that accepts illumina mate-pairs (e.g., SSPACE).
+
+I recommend running the program multiple times with an array of insert sizes.
+
+=head1 BUGS
+
+Please report them to <joseph.ryan@whitney.ufl.edu>
+
+=head1 OPTIONS
+
+=over 2
+
+=item B<--assembly>
+
+The FASTA file with the sequence or sequences from which to generate the mates
+
+=item B<--out>
+
+A prefix to use for the output FASTQ (or FASTA) files
+
+=item B<--readlen>
+
+(default: 50)
+the read length of the produced mate-pair library
+
+=item B<--insertsize>
+
+(default: 5000)
+the length of the insert size of the produced mate-pair library
+
+=item B<--fasta>
+
+by default matepairs are created in fastq format, but with this option
+they can be made as fasta files
+
+=item B<--print_inserts>
+
+this option will generate an additional output file that includes the full sequences of the inserts that were used to create the mate-pairs
+
+=item B<--matesperkb>
+
+(default: 5)
+the number of mates randomly generated for a particular sequence follows the formula ( (SEQUENCE_LENGTH - INSERTSIZE) / (1000 / MATESPERKB) )
+
+=back 
+
+=head1 COPYRIGHT
+
+Copyright (C) 2015 Joseph F. Ryan
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+=cut
