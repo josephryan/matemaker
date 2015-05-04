@@ -10,6 +10,7 @@ in as input. It is intended to scaffold an optimal assembly with suboptimal
 assemblies. The generated matepairs are in the same orientation as illumina matepair sequencing, and can be used without modification as input to any scaffolding software that accepts illumina mate-pairs (e.g., SSPACE). Quality scores are all set to unknown (represented by the character 'B').
 
 I recommend running the program multiple times with an array of insert sizes. See examples.
+
 =======
 ## AVAILABILITY
 
