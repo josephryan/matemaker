@@ -173,6 +173,8 @@ sub revcomp {
     return $seq;
 }
 
+__END__
+
 =head1 NAME
 
 B<matemaker> - make artificial mate pairs from long seqs
