@@ -24,15 +24,17 @@ use Pod::Usage;
 use Data::Dumper;
 
 our $PROGRAM_NAME = 'matemaker';
-our $VERSION = 0.02;
+our $VERSION = 0.03;
 our $AUTHOR  = 'Joseph F. Ryan <joseph.ryan@whitney.ufl.edu>';
 
+our $DEFAULT_SRAND = 42;
 our $DEFAULT_READLEN = 50;
 our $DEFAULT_INSERT = 5000;
-our $DEFAULT_MATES_PER_KB = 5;
+our $DEFAULT_MATES_PER_KB = 20;
 
 MAIN: {
     my $rh_opts = process_options();        
+    srand($rh_opts->{'srand'});
     my $ra_data = get_mates($rh_opts);
     print_mates($ra_data,$rh_opts);
 }
@@ -133,12 +135,14 @@ sub process_options {
                             "readlen=i" => \$rh_opts->{'readlen'},
                          "insertsize=i" => \$rh_opts->{'insertsize'},
                          "matesperkb=i" => \$rh_opts->{'matesperkb'},
+                              "srand=i" => \$rh_opts->{'srand'},
                                  "help" => \$rh_opts->{'help'});
     die "$VERSION\n" if ($rh_opts->{'version'});
     pod2usage({-exitval => 0, -verbose => 2}) if $rh_opts->{'help'};
     $rh_opts->{'readlen'} = $DEFAULT_READLEN unless ($rh_opts->{'readlen'});
     $rh_opts->{'insertsize'} = $DEFAULT_INSERT 
         unless ($rh_opts->{'insertsize'});
+    $rh_opts->{'srand'} = $DEFAULT_SRAND unless ( $rh_opts->{'srand'});
     $rh_opts->{'matesperkb'} = $DEFAULT_MATES_PER_KB 
         unless ($rh_opts->{'matesperkb'});
     unless ($rh_opts->{'assembly'} && $rh_opts->{'out'}) {
