@@ -24,7 +24,7 @@ use Pod::Usage;
 use Data::Dumper;
 
 our $PROGRAM_NAME = 'matemaker';
-our $VERSION = 1.0.0;
+our $VERSION = 1.1.0;
 our $AUTHOR  = 'Joseph F. Ryan <joseph.ryan@whitney.ufl.edu>';
 
 our $DEFAULT_SRAND = 42;
@@ -56,6 +56,9 @@ sub print_mates {
     if ($rh_opts->{'print_inserts'}) {
         open INS, ">$out.inserts.fa" or die "cannot open >$out.inserts.fa:$!";
     }
+    if ($rh_opts->{'print_coords'}) {
+        open COO, ">$out.coords.csv" or die "cannot open >$out.coords.csv:$!";
+    }
 
     my $count = 0;
     foreach my $ra_d (@{$ra_data}) {
@@ -68,13 +71,22 @@ sub print_mates {
             print MP1 "\@$count\n$ra_d->[0]\n+\n$qual_string\n";
             print MP2 "\@$count\n$ra_d->[1]\n+\n$qual_string\n";
         }
-        print INS ">$count\n$ra_d->[2]\n" if ($rh_opts->{'print_inserts'});
+        if ($rh_opts->{'print_inserts'}) {
+            print INS ">$count\n$ra_d->[2]\n";
+        }
+        if ($rh_opts->{'print_coords'}) {
+            print COO "$count,$ra_d->[3],$ra_d->[4],$ra_d->[5]\n";
+        }
         $count++;
     }
     print "$PROGRAM_NAME $VERSION\n";
-    print "output written to: $mp1, $mp2";
-    print ", and $out.inserts.fa" if ($rh_opts->{'print_inserts'});
-    print "\n";
+    print "mates written to: $mp1 and $mp2\n";
+    if ($rh_opts->{'print_inserts'}) {
+        print "inserts written to $out.inserts.fa\n";
+    }
+    if ($rh_opts->{'print_coords'}) {
+        print "matepair coords written to $out.coords.csv\n";
+    }
 }
 
 sub get_mates {
@@ -82,12 +94,13 @@ sub get_mates {
     my @data = ();
     my $fp = JFR::Fasta->new($rh_opts->{'assembly'});
     while (my $rec = $fp->get_record()) {
+        my $def = JFR::Fasta->get_def_w_o_gt($rec->{'def'});
         my $len = length($rec->{'seq'});
         my $diff = $len - $rh_opts->{'insertsize'};
         next if ($len < ($rh_opts->{'insertsize'} + $rh_opts->{'readlen'} * 2));
         my $num_mates = int(($len - $rh_opts->{'insertsize'}) / (1000 / $rh_opts->{'matesperkb'})); 
         for (my $i = 0; $i < $num_mates; $i++) {
-            my $ra_mp = get_mate_pair($rec->{'seq'},$len,$rh_opts);
+            my $ra_mp = get_mate_pair($rec->{'seq'},$len,$rh_opts,$def);
             push @data, $ra_mp if ($ra_mp);
         }
     }
@@ -98,6 +111,7 @@ sub get_mate_pair {
     my $seq         = shift;
     my $len         = shift;
     my $rh_opts     = shift;
+    my $def         = shift;
     my $insert_size = $rh_opts->{'insertsize'};
     my $readlen     = $rh_opts->{'readlen'};
 
@@ -110,7 +124,7 @@ sub get_mate_pair {
     my $mp2 = substr $seq, $mp2_start, $readlen or substr_err($len,$mp2_start,2);
     return 0 if ($mp1 =~ m/[Nn][Nn]/);
     return 0 if ($mp2 =~ m/[Nn][Nn]/);
-    my $ra_out = [$mp1,$mp2];
+    my $ra_out = [$mp1,$mp2,'',$mp1_start,$mp2_start,$def];
     if ($rh_opts->{'print_inserts'}) {
         $ra_out->[2] = substr $seq, $frag_start, $frag_size;
     }
@@ -132,6 +146,7 @@ sub process_options {
                                 "out=s" => \$rh_opts->{'out'},
                                 "fasta" => \$rh_opts->{'fasta'},
                         "print_inserts" => \$rh_opts->{'print_inserts'},
+                         "print_coords" => \$rh_opts->{'print_coords'},
                             "readlen=i" => \$rh_opts->{'readlen'},
                          "insertsize=i" => \$rh_opts->{'insertsize'},
                          "matesperkb=i" => \$rh_opts->{'matesperkb'},
@@ -154,7 +169,7 @@ sub process_options {
 }
 
 sub usage {
-    die "usage: $0 [--readlen=INT] [--insertsize=INT] [--fasta] [--print_inserts] [--matesperkb=INT] --assembly=FILE --out=OUTPUTPREFIX\n";
+    die "usage: $0 [--readlen=INT] [--insertsize=INT] [--fasta] [--print_inserts] [--print_coords] [--matesperkb=INT] --assembly=FILE --out=OUTPUTPREFIX\n";
 }
 
 # copied from version 0.06 of NHGRI::Bioutils (w/warnings commented)
@@ -189,7 +204,7 @@ Joseph F. Ryan <joseph.ryan@whitney.ufl.edu>
 
 =head1 SYNOPSIS
 
-matemaker [--readlen=INT] [--insertsize=INT] [--fasta] [--print_inserts] [--matesperkb=INT] --assembly=FILE --out=OUTPUTPREFIX\n";
+matemaker [--readlen=INT] [--insertsize=INT] [--fasta] [--print_inserts] [--print_coords] [--matesperkb=INT] --assembly=FILE --out=OUTPUTPREFIX\n";
 
 =head1 DESCRIPTION
 
@@ -235,6 +250,10 @@ they can be made as fasta files
 
 this option will generate an additional output file that includes the full sequences of the inserts that were used to create the mate-pairs
 
+=item B<--print_coords>
+
+this option will generate an additional output file (csv format) that includes the mate_pair id, the coordinates of the mates and the sequence_id of the sequence used to create the mates.  The suffix will be `coords.csv` and the format of the file is: mate_id,mate1_coord,mate2_coord,defline_of_seq_used_to_generate_mate NOTE: coordinates are 0 based and the position of the 5' mates (A.fq) is the position of the reverse complement of the mate.
+
 =item B<--matesperkb>
 
 (default: 5)
@@ -244,7 +263,7 @@ the number of mates randomly generated for a particular sequence follows the for
 
 =head1 COPYRIGHT
 
-Copyright (C) 2015 Joseph F. Ryan
+Copyright (C) 2015,2016,2017,2018,2019 Joseph F. Ryan
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
