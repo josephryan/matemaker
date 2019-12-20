@@ -79,6 +79,42 @@ can be viewed by running any of the following:
         perldoc matemaker
         man matemaker  # available after installation
 
+## OPTIONS
+
+       --assembly
+         The FASTA file with the sequence or sequences from which to generate
+         the mates
+
+       --out
+         A prefix to use for the output FASTQ (or FASTA) files
+
+       --readlen
+         (default: 50) the read length of the produced mate-pair library
+
+       --insertsize
+         (default: 5000) the length of the insert size of the produced mate-
+         pair library
+
+       --fasta
+         by default matepairs are created in fastq format, but with this
+         option they can be made as fasta files
+
+       --print_inserts
+         this option will generate an additional output file that includes the
+         full sequences of the inserts that were used to create the mate-pairs
+
+       --print_coords
+         this option will generate an additional output file (csv format) that
+         includes the mate_pair id, the coordinates of the mates and the
+         sequence_id of the sequence used to create the mates.  The suffix
+         will be `coords.csv` and the format of the file is:
+         mate_id,mate1_coord,mate2_coord,defline_of_seq_used_to_generate_mate
+
+       --matesperkb
+         (default: 5) the number of mates randomly generated for a particular
+         sequence follows the formula ( (SEQUENCE_LENGTH - INSERTSIZE) / (1000
+         / MATESPERKB) )
+
 ## COPYRIGHT AND LICENSE
 
 Copyright (C) 2015 Joseph F. Ryan
