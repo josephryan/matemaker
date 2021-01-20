@@ -2,7 +2,7 @@
 
 ## DESCRIPTION
 
-`matemaker` has not been tested extensively and is being actively developed. Please use with caution. I appreciate hearing about your experience with the program.
+I appreciate hearing about your experience with the matemaker.
 
 `matemaker` will generate a pair of fastq files (left and right) that
 consist of artificial mate-pairs generated from one or more sequences sent
