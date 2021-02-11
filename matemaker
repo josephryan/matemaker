@@ -24,7 +24,7 @@ use Pod::Usage;
 use Data::Dumper;
 
 our $PROGRAM_NAME = 'matemaker';
-our $VERSION = 1.1.0;
+our $VERSION = '1.2';
 our $AUTHOR  = 'Joseph F. Ryan <joseph.ryan@whitney.ufl.edu>';
 
 our $DEFAULT_SRAND = 42;
@@ -152,7 +152,7 @@ sub process_options {
                          "matesperkb=i" => \$rh_opts->{'matesperkb'},
                               "srand=i" => \$rh_opts->{'srand'},
                                  "help" => \$rh_opts->{'help'});
-    die "$VERSION\n" if ($rh_opts->{'version'});
+    die "matemaker v. $VERSION\n" if ($rh_opts->{'version'});
     pod2usage({-exitval => 0, -verbose => 2}) if $rh_opts->{'help'};
     $rh_opts->{'readlen'} = $DEFAULT_READLEN unless ($rh_opts->{'readlen'});
     $rh_opts->{'insertsize'} = $DEFAULT_INSERT 
