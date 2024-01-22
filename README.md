@@ -69,6 +69,50 @@ These can be used as input to a scaffolding software (e.g., SSPACE) to scaffold 
 
       Hsap.chr22.opt.fa
 
+## HOW I USUALLY RUN IT
+
+matemaker --assembly assembly.fa --insertsize=1000 --out=01k
+matemaker --assembly assembly.fa --insertsize=2000 --out=02k
+matemaker --assembly assembly.fa --insertsize=3000 --out=03k
+matemaker --assembly assembly.fa --insertsize=4000 --out=04k
+matemaker --assembly assembly.fa --insertsize=5000 --out=05k
+matemaker --assembly assembly.fa --insertsize=6000 --out=06k
+matemaker --assembly assembly.fa --insertsize=7000 --out=07k
+matemaker --assembly assembly.fa --insertsize=8000 --out=08k
+matemaker --assembly assembly.fa --insertsize=9000 --out=09k
+matemaker --assembly assembly.fa --insertsize=10000 --out=10k
+matemaker --assembly assembly.fa --insertsize=11000 --out=11k
+matemaker --assembly assembly.fa --insertsize=12000 --out=12k
+matemaker --assembly assembly.fa --insertsize=13000 --out=13k
+matemaker --assembly assembly.fa --insertsize=14000 --out=14k
+matemaker --assembly assembly.fa --insertsize=15000 --out=15k
+matemaker --assembly assembly.fa --insertsize=16000 --out=16k
+matemaker --assembly assembly.fa --insertsize=17000 --out=17k
+matemaker --assembly assembly.fa --insertsize=18000 --out=18k
+matemaker --assembly assembly.fa --insertsize=19000 --out=19k
+matemaker --assembly assembly.fa --insertsize=20000 --out=20k
+matemaker --assembly assembly.fa --insertsize=21000 --out=21k
+matemaker --assembly assembly.fa --insertsize=22000 --out=22k
+matemaker --assembly assembly.fa --insertsize=23000 --out=23k
+matemaker --assembly assembly.fa --insertsize=24000 --out=24k
+matemaker --assembly assembly.fa --insertsize=25000 --out=25k
+matemaker --assembly assembly.fa --insertsize=26000 --out=26k
+matemaker --assembly assembly.fa --insertsize=27000 --out=27k
+matemaker --assembly assembly.fa --insertsize=28000 --out=28k
+matemaker --assembly assembly.fa --insertsize=29000 --out=29k
+matemaker --assembly assembly.fa --insertsize=30000 --out=30k
+
+#### Corresponding SSPACE config file
+
+lib1 bwa 01k.A.fq 01k.B.fq 1000 0.25 RF
+lib2 bwa 02k.A.fq 02k.B.fq 2000 0.25 RF
+lib3 bwa 03k.A.fq 03k.B.fq 3000 0.25 RF
+lib4 bwa 04k.A.fq 04k.B.fq 4000 0.25 RF
+...
+lib27 bwa 27k.A.fq 27k.B.fq 27000 0.25 RF
+lib28 bwa 28k.A.fq 28k.B.fq 28000 0.25 RF
+lib29 bwa 29k.A.fq 29k.B.fq 29000 0.25 RF
+lib30 bwa 30k.A.fq 30k.B.fq 30000 0.25 RF
 
 ## DOCUMENTATION
 
