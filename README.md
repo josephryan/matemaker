@@ -108,7 +108,9 @@ lib1 bwa 01k.A.fq 01k.B.fq 1000 0.25 RF
 lib2 bwa 02k.A.fq 02k.B.fq 2000 0.25 RF
 lib3 bwa 03k.A.fq 03k.B.fq 3000 0.25 RF
 lib4 bwa 04k.A.fq 04k.B.fq 4000 0.25 RF
+
 ...
+
 lib27 bwa 27k.A.fq 27k.B.fq 27000 0.25 RF
 lib28 bwa 28k.A.fq 28k.B.fq 28000 0.25 RF
 lib29 bwa 29k.A.fq 29k.B.fq 29000 0.25 RF
